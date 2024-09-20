@@ -120,7 +120,7 @@ async function runTest(endpoint) {
     } else {
         endpoint.responseEqual = JSON.stringify(data1) === JSON.stringify(data2);
         if (endpoint.responseEqual) {
-            endpoint.responseObjectEqual = _.isEqual(data1, data2);
+            endpoint.responseObjectEqual = true;
         } else {
             endpoint.responseObjectEqual = _.isEqual(data1, data2);
         }//TODO else controllare oggetto se è uguale
