@@ -88,6 +88,7 @@ function addGroup() {
     for (let i = 0; i < endpointArray.length; i++) {
         endpointArray[i] = endpointArray[i].replace(url1.value, '');
         endpointArray[i] = endpointArray[i].replace(url2.value, '');
+        endpointArray[i] = endpointArray[i].trim();
     }
     appStore.addGroup(nome.value, urls, endpointArray);
     nome.value = '';
