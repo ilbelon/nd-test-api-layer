@@ -86,14 +86,14 @@ async function runTest(endpoint) {
     endpoint.isRunning = true;
     const baseUrl = 'http://127.0.0.1:5000/webcaller?url=';
     const urlParam1 = prop.group.url1 + endpoint.endpoint;
-    const response1 = await fetch(baseUrl + urlParam1).catch((err) => {
+    const response1 = await fetch(baseUrl + encodeURIComponent(urlParam1)).catch((err) => {
         // endpoint.responseCode1 = response1.status;
         endpoint.isRunning = false;
         endpoint.hasError = true;
         console.error(err);
     });
     const urlParam2 = prop.group.url2 + endpoint.endpoint;
-    const response2 = await fetch(baseUrl + urlParam2).catch((err) => {
+    const response2 = await fetch(baseUrl + encodeURIComponent(urlParam2)).catch((err) => {
         // endpoint.responseCode2 = response2.status;
         endpoint.isRunning = false;
         endpoint.hasError = true;
