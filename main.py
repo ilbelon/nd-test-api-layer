@@ -14,10 +14,17 @@ def open_html():
 def run_script():
     response = None
     url = request.args.get('url')
+    query_string = request.query_string
+    query_string = query_string.decode('UTF-8')
+    e_index = query_string.find('&')
+    if(e_index!=-1):
+        query_string_every_other = query_string[e_index:]
+        url = url+query_string_every_other
+    print(url)
     if not url:
         return jsonify({'error': 'URL parameter is required'}), 400
     try:
-        headers = {'X-IBM-Client-Id': '**', 'X-IBM-Client-Secret': '**'}
+        headers = {'X-IBM-Client-Id': '**', 'X-IBM-Client-Secret': '**','Accept':'*/*','Accept-Encoding':'gzip, deflate, br'}
         response = requests.get(url,headers=headers,verify=False)
         response.raise_for_status()
         return response.json()
