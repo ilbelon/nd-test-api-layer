@@ -18,7 +18,7 @@ def run_script():
         return jsonify({'error': 'URL parameter is required'}), 400
     try:
         headers = {'X-IBM-Client-Id': '**', 'X-IBM-Client-Secret': '**'}
-        response = requests.get(url,headers=headers)
+        response = requests.get(url,headers=headers,verify=False)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as http_err:
