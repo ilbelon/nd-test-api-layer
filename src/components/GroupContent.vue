@@ -129,6 +129,9 @@ async function runTest(endpoint) {
             endpoint.response1 = data1;
             endpoint.response2 = data2;
         }
+        if (!(endpoint.responseEqual || endpoint.responseObjectEqual)) {
+            endpoint.hasError = true;
+        }
     }
     endpoint.lastRunDate = new Date();
     endpoint.isRunning = false;
