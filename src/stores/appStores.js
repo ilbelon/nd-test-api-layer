@@ -53,6 +53,36 @@ export const useAppStore = defineStore('appStore', () => {
       setStatus('read')
     }
   }
+
+  function splitInMoreGroups(name, index) {
+    let groupToSplit = null
+    for (let i = 0; groups.length; i++) {
+      if (groups[i].name == name) {
+        groupToSplit = groups[i]
+      }
+      let end = false
+      let urls = []
+      urls.push(groupToSplit.url1)
+      urls.push(groupToSplit.url2)
+      let endpoints = []
+      let i = 0
+      while (i < 100 || end) {
+        if (
+          groupToSplit.endpoints[index + i] == undefined ||
+          groupToSplit.endpoints[index + i] == null
+        ) {
+          end = true
+        } else {
+          endpoints.push(groupToSplit.endpoints[index + i])
+          i++
+        }
+      }
+      let newGroupName = groupToSplit.name + 'page_' + index
+      let newGroup = new GroupModel(newGroupName, urls, endpoints)
+      groups.push(newGroup)
+    }
+  }
+
   return {
     groups,
     activeGroup,
@@ -62,6 +92,7 @@ export const useAppStore = defineStore('appStore', () => {
     setActiveGroup,
     setStatus,
     addAllGroupsDataFrom,
-    addSingleGroupDataFrom
+    addSingleGroupDataFrom,
+    splitInMoreGroups
   }
 })

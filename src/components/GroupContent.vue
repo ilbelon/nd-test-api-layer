@@ -4,9 +4,21 @@
             <h5>Url1: {{ prop.group.url1 }} - Url2: {{ prop.group.url2 }}</h5>
             <div class="buttons">
                 <button v-if="!fullTestIsRunning" class="tag is-primary" @click="runTestGroup()">Test Gruppo</button>
-                <tag v-else class="tag">Test running...</tag>
+                <tag v-else class="tag is-warning">Test running...</tag>
+
+                <button v-if="!fullTestIsRunning" class="tag is-primary" @click="runOnlyErrorsTestGroup()">Test Solo
+                    endpoint con errori paginati</button>
+                <tag v-else class="tag is-warning">Test running...</tag>
 
                 <button class="tag is-primary" @click="downloadAllData()">Download Json del gruppo</button>
+                <button class="tag is-primary" @click="downloadOnlyErrorData()">Download Json degli errori</button>
+                <button class="tag is-primary" @click="downloadOnlyErrorDataInNrequestsBlocks()">Download Json degli
+                    errori paginati</button>
+                <div class="field">
+                    <label for="" class="label">Index sottogruppo</label>
+                    <input class="input" type="text" placeholder="Nome" v-model="index" />
+                </div>
+                <button class="tag is-error" @click="splitInGroups()">Separa in più gruppi</button>
                 <div class="block">
                     <label class="checkbox">
                         <input type="checkbox" checked v-model="onlyErrors" />
@@ -32,6 +44,8 @@
                         <th><abbr title="Response Equal">RE</abbr></th>
                         <th><abbr title="Response Object Equal">ROE</abbr></th>
                         <th><abbr title="Last Run">Last Run</abbr></th>
+                        <th><abbr title="R1 Length">R1 Length</abbr></th>
+                        <th><abbr title="R2 Length">R2 Length</abbr></th>
                         <th><abbr title="Actions">Actions</abbr></th>
                     </tr>
                 </thead>
@@ -54,12 +68,16 @@
                             <img v-else alt="false" class="icon" src="../asset/cross-icon.png" />
                         </td>
                         <td>{{ getLastRunDate(endpoint.lastRunDate) }}</td>
+                        <td class="wrap-content" v-text="JSON.stringify(endpoint.response1).length"></td>
+                        <td class="wrap-content" v-text="JSON.stringify(endpoint.response2).length"></td>
                         <td>
                             <div class="buttons">
                                 <button v-if="!endpoint.isRunning && !fullTestIsRunning" class="tag is-primary"
                                     @click="runTest(endpoint)">Test</button>
                                 <button v-else class="tag">Test running...</button>
                             </div>
+                            <button class="tag is-primary" @click="downloadThisData(endpoint)">Download Json di questa
+                                risposta</button>
                         </td>
                     </tr>
                 </tbody>
@@ -74,12 +92,14 @@ import { ref, computed } from 'vue'
 const fullTestIsRunning = ref(false);
 import _ from 'lodash';
 // const testPercenteage = ref(0);
+import { useAppStore } from '../stores/appStores';
+const appStore = useAppStore();
 const testTotal = ref(0);
 const testDone = ref(0);
 const prop = defineProps({
     group: {}
 })
-
+const index = ref('');
 const onlyErrors = ref(true);
 // const tests = reactive([]);
 async function runTest(endpoint) {
@@ -148,9 +168,46 @@ async function runTestGroup() {
     fullTestIsRunning.value = false;
 }
 
+async function runOnlyErrorsTestGroup() {
+    fullTestIsRunning.value = true;
+    testTotal.value = prop.group.endpoints.length;
+    testDone.value = 0;
+    for (let i = 0; i < prop.group.endpoints.length; i++) {
+        if (prop.group.endpoints[i].responseEqual) continue;
+        await runTest(prop.group.endpoints[i]);
+        testDone.value++;
+    }
+
+    fullTestIsRunning.value = false;
+}
+
 
 function downloadAllData() {
     downloadDataAsJson(prop.group, prop.group.name + '.json');
+}
+function downloadOnlyErrorData() {
+    let dataToExport = [];
+    for (let i = 0; i < prop.group.endpoints.length; i++) {
+        if (prop.group.endpoints[i].hasError) {
+            dataToExport.push(prop.group.endpoints[i]);
+        }
+    }
+    downloadDataAsJson(dataToExport, prop.group.name + '_ERROR.json');
+}
+
+function downloadOnlyErrorDataInNrequestsBlocks() {
+    let page = 0;
+    let dataToExport = [];
+    for (let i = 0; i < prop.group.endpoints.length; i++) {
+        if (prop.group.endpoints[i].hasError) {
+            dataToExport.push(prop.group.endpoints[i]);
+            if (dataToExport.length >= 250) {
+                downloadDataAsJson(dataToExport, prop.group.name + '_ERROR_page' + page + '.json');
+                dataToExport = [];
+                page++;
+            }
+        }
+    }
 }
 
 function downloadDataAsJson(data, filename) {
@@ -162,9 +219,50 @@ function downloadDataAsJson(data, filename) {
     link.click();
 }
 
+function downloadThisData(endpoint) {
+    downloadDataAsJson(endpoint, prop.group.name + '_' + endpoint.endpoint + '.json')
+}
+
 function getLastRunDate(value) {
     if (value == null) return 'Never'
     else return value.toLocaleString()
+}
+
+function splitInGroups() {
+    let indexNumber = Number(index.value);
+    let objectToDownload = {};
+    objectToDownload.name = prop.group.name + '_' + indexNumber + '_Errors';
+    objectToDownload.url1 = prop.group.url1;
+    objectToDownload.url2 = prop.group.url2;
+    objectToDownload.endpoints = [];
+    let end = false;
+    let i = 0;
+    let lastIndex = 0;
+    while (end || i < 50) {
+        let thisIndex = indexNumber + i;
+        console.log(thisIndex);
+        if (prop.group.endpoints[thisIndex] == undefined || prop.group.endpoints[thisIndex] == null) {
+            end = true;
+        } else {
+            if (prop.group.endpoints[thisIndex].hasError) {
+                objectToDownload.endpoints.push(prop.group.endpoints[thisIndex]);
+                i++;
+                lastIndex = thisIndex;
+            }
+        }
+    }
+    downloadDataAsJson(objectToDownload, objectToDownload.name + '_' + lastIndex + '.json');
+}
+
+function getRespPreview(value) {
+    if (value == undefined || value == null) return '';
+    else {
+        if (value.length > 15) {
+            return value.substring(0, 15);
+        } else {
+            return value;
+        }
+    }
 }
 
 const endpointToShow = computed(() => {
@@ -180,5 +278,12 @@ const endpointToShow = computed(() => {
 .icon {
     width: 24px;
     height: 24px;
+}
+
+.wrap-content {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 150px;
 }
 </style>
