@@ -6,19 +6,7 @@
                 <button v-if="!fullTestIsRunning" class="tag is-primary" @click="runTestGroup()">Test Gruppo</button>
                 <tag v-else class="tag is-warning">Test running...</tag>
 
-                <button v-if="!fullTestIsRunning" class="tag is-primary" @click="runOnlyErrorsTestGroup()">Test Solo
-                    endpoint con errori paginati</button>
-                <tag v-else class="tag is-warning">Test running...</tag>
-
                 <button class="tag is-primary" @click="downloadAllData()">Download Json del gruppo</button>
-                <button class="tag is-primary" @click="downloadOnlyErrorData()">Download Json degli errori</button>
-                <button class="tag is-primary" @click="downloadOnlyErrorDataInNrequestsBlocks()">Download Json degli
-                    errori paginati</button>
-                <div class="field">
-                    <label for="" class="label">Index sottogruppo</label>
-                    <input class="input" type="text" placeholder="Nome" v-model="index" />
-                </div>
-                <button class="tag is-error" @click="splitInGroups()">Separa in più gruppi</button>
                 <div class="block">
                     <label class="checkbox">
                         <input type="checkbox" checked v-model="onlyErrors" />
@@ -32,6 +20,9 @@
                 <progress class="progress is-warning" :value="testDone" :max="testTotal">
                     75%
                 </progress>
+            </div>
+            <div class="block">
+                <h6>Trovati {{ numberOfEndpointsWithError }} errori su {{ numberOfEndpoints }} totali</h6>
             </div>
         </div>
         <div class="table-container">
@@ -75,9 +66,10 @@
                                 <button v-if="!endpoint.isRunning && !fullTestIsRunning" class="tag is-primary"
                                     @click="runTest(endpoint)">Test</button>
                                 <button v-else class="tag">Test running...</button>
+                                <button class="tag is-primary" @click="downloadThisData(endpoint)">Json
+                                    risposta</button>
                             </div>
-                            <button class="tag is-primary" @click="downloadThisData(endpoint)">Download Json di questa
-                                risposta</button>
+
                         </td>
                     </tr>
                 </tbody>
@@ -92,14 +84,11 @@ import { ref, computed } from 'vue'
 const fullTestIsRunning = ref(false);
 import _ from 'lodash';
 // const testPercenteage = ref(0);
-import { useAppStore } from '../stores/appStores';
-const appStore = useAppStore();
 const testTotal = ref(0);
 const testDone = ref(0);
 const prop = defineProps({
     group: {}
 })
-const index = ref('');
 const onlyErrors = ref(true);
 // const tests = reactive([]);
 async function runTest(endpoint) {
@@ -185,30 +174,6 @@ async function runOnlyErrorsTestGroup() {
 function downloadAllData() {
     downloadDataAsJson(prop.group, prop.group.name + '.json');
 }
-function downloadOnlyErrorData() {
-    let dataToExport = [];
-    for (let i = 0; i < prop.group.endpoints.length; i++) {
-        if (prop.group.endpoints[i].hasError) {
-            dataToExport.push(prop.group.endpoints[i]);
-        }
-    }
-    downloadDataAsJson(dataToExport, prop.group.name + '_ERROR.json');
-}
-
-function downloadOnlyErrorDataInNrequestsBlocks() {
-    let page = 0;
-    let dataToExport = [];
-    for (let i = 0; i < prop.group.endpoints.length; i++) {
-        if (prop.group.endpoints[i].hasError) {
-            dataToExport.push(prop.group.endpoints[i]);
-            if (dataToExport.length >= 250) {
-                downloadDataAsJson(dataToExport, prop.group.name + '_ERROR_page' + page + '.json');
-                dataToExport = [];
-                page++;
-            }
-        }
-    }
-}
 
 function downloadDataAsJson(data, filename) {
     const jsonString = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
@@ -228,43 +193,6 @@ function getLastRunDate(value) {
     else return value.toLocaleString()
 }
 
-function splitInGroups() {
-    let indexNumber = Number(index.value);
-    let objectToDownload = {};
-    objectToDownload.name = prop.group.name + '_' + indexNumber + '_Errors';
-    objectToDownload.url1 = prop.group.url1;
-    objectToDownload.url2 = prop.group.url2;
-    objectToDownload.endpoints = [];
-    let end = false;
-    let i = 0;
-    let lastIndex = 0;
-    while (end || i < 50) {
-        let thisIndex = indexNumber + i;
-        console.log(thisIndex);
-        if (prop.group.endpoints[thisIndex] == undefined || prop.group.endpoints[thisIndex] == null) {
-            end = true;
-        } else {
-            if (prop.group.endpoints[thisIndex].hasError) {
-                objectToDownload.endpoints.push(prop.group.endpoints[thisIndex]);
-                i++;
-                lastIndex = thisIndex;
-            }
-        }
-    }
-    downloadDataAsJson(objectToDownload, objectToDownload.name + '_' + lastIndex + '.json');
-}
-
-function getRespPreview(value) {
-    if (value == undefined || value == null) return '';
-    else {
-        if (value.length > 15) {
-            return value.substring(0, 15);
-        } else {
-            return value;
-        }
-    }
-}
-
 const endpointToShow = computed(() => {
     if (onlyErrors.value) {
         return prop.group.endpoints.filter((endpoint) => endpoint.hasError);
@@ -272,6 +200,14 @@ const endpointToShow = computed(() => {
     else {
         return prop.group.endpoints
     }
+})
+
+const numberOfEndpointsWithError = computed(() => {
+    return prop.group.endpoints.filter((endpoint) => endpoint.hasError).length;
+})
+
+const numberOfEndpoints = computed(() => {
+    return prop.group.endpoints.length;
 })
 </script>
 <style scoped>
