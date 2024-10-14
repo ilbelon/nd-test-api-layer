@@ -24,7 +24,7 @@ def run_script():
     if not url:
         return jsonify({'error': 'URL parameter is required'}), 400
     try:
-        headers = {'X-IBM-Client-Id': 'glljj708is8ocfe3qik2rck5r84mnn5p', 'X-IBM-Client-Secret': 'dmit94umc6sc9xe1lum5myky1gglst1v','Accept':'*/*','Accept-Encoding':'gzip, deflate, br'}
+        headers = {'X-IBM-Client-Id': '**', 'X-IBM-Client-Secret': '**','Accept':'*/*','Accept-Encoding':'gzip, deflate, br'}
         response = requests.get(url,headers=headers,verify=False)
         response.raise_for_status()
         return response.json()
