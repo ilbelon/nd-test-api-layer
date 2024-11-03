@@ -59,8 +59,12 @@
                             <img v-else alt="false" class="icon" src="../asset/cross-icon.png" />
                         </td>
                         <td>{{ getLastRunDate(endpoint.lastRunDate) }}</td>
-                        <td class="wrap-content" v-text="JSON.stringify(endpoint.response1).length"></td>
-                        <td class="wrap-content" v-text="JSON.stringify(endpoint.response2).length"></td>
+                        <td v-if="endpoint.response1 != undefined && endpoint.response1 != null" class="wrap-content"
+                            v-text="JSON.stringify(endpoint.response1).length"></td>
+                        <td v-else></td>
+                        <td v-if="endpoint.response2 != undefined && endpoint.response2 != null" class="wrap-content"
+                            v-text="JSON.stringify(endpoint.response2).length"></td>
+                        <td v-else></td>
                         <td>
                             <div class="buttons">
                                 <button v-if="!endpoint.isRunning && !fullTestIsRunning" class="tag is-primary"
@@ -137,9 +141,14 @@ async function runTest(endpoint) {
             //per salvare spazio salva le risposte solo se risultano diverse
             endpoint.response1 = data1;
             endpoint.response2 = data2;
+        } else {
+            endpoint.response1 = null;
+            endpoint.response2 = null;
         }
-        if (!(endpoint.responseEqual || endpoint.responseObjectEqual)) {
+        if (!endpoint.responseEqual) {
             endpoint.hasError = true;
+        } else {
+            endpoint.hasError = false;
         }
     }
     endpoint.lastRunDate = new Date();
