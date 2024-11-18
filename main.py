@@ -24,21 +24,21 @@ def run_script():
         return jsonify({'error': 'URL parameter is required'}), 400
     try:
         headers = {}
-        response = requests.get(url,headers=headers,verify=False)
+        response = requests.get(url,verify=False)
         response.raise_for_status()
-        return response.json()
+        return response.text, response.status_code
     except requests.exceptions.HTTPError as http_err:
         print('1')
         print (response.status_code)
-        print(response.json())
+        
         print (http_err)
-        return response.json(), response.status_code
+        return response.text, response.status_code
     except Exception as err:
         print('2')
         print (response.status_code)
-        print(response.json())
+        
         print (err)
-        return response.json(), response.status_code
+        return response.text, response.status_code
 
 
 if __name__ == '__main__':

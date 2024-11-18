@@ -5,7 +5,8 @@
             <div class="buttons">
                 <button v-if="!fullTestIsRunning" class="tag is-primary" @click="runTestGroup()">Test Gruppo</button>
                 <tag v-else class="tag is-warning">Test running...</tag>
-
+                <button v-if="!fullTestIsRunning" class="tag is-primary" @click="runOnlyErrorsTestGroup()">Test Gruppo
+                    solo mancanti</button>
                 <button class="tag is-primary" @click="downloadAllData()">Download Json del gruppo</button>
                 <div class="block">
                     <label class="checkbox">
@@ -37,6 +38,7 @@
                         <th><abbr title="Last Run">Last Run</abbr></th>
                         <th><abbr title="R1 Length">R1 Length</abbr></th>
                         <th><abbr title="R2 Length">R2 Length</abbr></th>
+                        <th><abbr title="R1-R2">R1-R2</abbr></th>
                         <th><abbr title="Actions">Actions</abbr></th>
                     </tr>
                 </thead>
@@ -65,9 +67,14 @@
                         <td v-if="endpoint.response2 != undefined && endpoint.response2 != null" class="wrap-content"
                             v-text="JSON.stringify(endpoint.response2).length"></td>
                         <td v-else></td>
+                        <td v-if="endpoint.response1 != undefined && endpoint.response1 != null && endpoint.response2 != undefined && endpoint.response2 != null"
+                            class="wrap-content"
+                            v-text="JSON.stringify(endpoint.response1).length - JSON.stringify(endpoint.response2).length">
+                        </td>
+                        <td v-else></td>
                         <td>
                             <div class="buttons">
-                                <button v-if="!endpoint.isRunning && !fullTestIsRunning" class="tag is-primary"
+                                <button v-if="!endpoint.isRunning" class="tag is-primary"
                                     @click="runTest(endpoint)">Test</button>
                                 <button v-else class="tag">Test running...</button>
                                 <button class="tag is-primary" @click="downloadThisData(endpoint)">Json
@@ -112,38 +119,88 @@ async function runTest(endpoint) {
         endpoint.hasError = true;
         console.error(err);
     });
-    const data1 = await response1.json().catch((err) => {
-        endpoint.isRunning = false;
-        endpoint.hasError = true;
+
+    let data1String = await response1.text();
+    let data2String = await response2.text();
+
+    let isJson = true;
+    let data1 = null;
+    // await JSON.parse(data1String).catch((err) => {
+    //     isJson = false;
+    //     console.error(err);
+    // });
+    try {
+        data1 = await JSON.parse(data1String)
+    }
+    catch (err) {
+        isJson = false;
         console.error(err);
-    });
-    const data2 = await response2.json().catch((err) => {
-        endpoint.isRunning = false;
-        endpoint.hasError = true;
+    }
+    let data2 = null;
+    // = await JSON.parse(data2String).catch((err) => {
+    //     isJson = false;
+    //     console.error(err);
+    // });
+    try {
+        data2 = await JSON.parse(data2String)
+    }
+    catch (err) {
+        isJson = false;
         console.error(err);
-    });
+    }
     endpoint.responseCode1 = response1.status;
     endpoint.responseCode2 = response2.status;
+
     if (response1.status.toString()[0] != '2' || response2.status.toString()[0] != '2') {
         endpoint.responseEqual = false;
         endpoint.responseObjectEqual = false;
-        endpoint.response1 = data1;
-        endpoint.response2 = data2;
-        endpoint.hasError = true;
-    } else {
-        endpoint.responseEqual = JSON.stringify(data1) === JSON.stringify(data2);
-        if (endpoint.responseEqual) {
-            endpoint.responseObjectEqual = true;
-        } else {
-            endpoint.responseObjectEqual = _.isEqual(data1, data2);
-        }//TODO else controllare oggetto se è uguale
-        if (!endpoint.responseEqual) {
-            //per salvare spazio salva le risposte solo se risultano diverse
+        if (isJson) {
             endpoint.response1 = data1;
             endpoint.response2 = data2;
         } else {
+            endpoint.response1 = data1String;
+            endpoint.response2 = data2String;
+        }
+
+        endpoint.hasError = true;
+    } else {
+        if (isJson) {
+            console.log('confronto json');
+            endpoint.responseEqual = JSON.stringify(data1) === JSON.stringify(data2);
+        } else {
+            console.log('confronto stringhe');
+            console.log(endpoint.endpoint);
+            endpoint.responseEqual = data1String === data2String;
+        }
+        if (endpoint.responseEqual) {
+            endpoint.responseObjectEqual = true;
+        } else {
+            if (isJson) {
+                endpoint.responseObjectEqual = _.isEqual(data1, data2);
+            } else {
+                endpoint.responseObjectEqual = false;
+            }
+        }//TODO else controllare oggetto se è uguale
+        if (!endpoint.responseEqual) {
+            //per salvare spazio salva le risposte solo se risultano diverse
+            if (isJson) {
+                endpoint.response1 = data1;
+                endpoint.response2 = data2;
+            } else {
+                endpoint.response1 = data1String;
+                endpoint.response2 = data2String;
+            }
+
+        } else {
             endpoint.response1 = null;
             endpoint.response2 = null;
+            // if (isJson) {
+            //     endpoint.response1 = data1;
+            //     endpoint.response2 = data2;
+            // } else {
+            //     endpoint.response1 = data1String;
+            //     endpoint.response2 = data2String;
+            // }
         }
         if (!endpoint.responseEqual) {
             endpoint.hasError = true;
@@ -171,8 +228,9 @@ async function runOnlyErrorsTestGroup() {
     testTotal.value = prop.group.endpoints.length;
     testDone.value = 0;
     for (let i = 0; i < prop.group.endpoints.length; i++) {
-        if (prop.group.endpoints[i].responseEqual) continue;
-        await runTest(prop.group.endpoints[i]);
+        if (prop.group.endpoints[i].lastRunDate == null) {
+            await runTest(prop.group.endpoints[i]);
+        }
         testDone.value++;
     }
 
