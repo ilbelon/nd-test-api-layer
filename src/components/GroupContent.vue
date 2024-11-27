@@ -7,6 +7,8 @@
                 <tag v-else class="tag is-warning">Test running...</tag>
                 <button v-if="!fullTestIsRunning" class="tag is-primary" @click="runOnlyErrorsTestGroup()">Test Gruppo
                     solo mancanti</button>
+                <button v-if="!fullTestIsRunning" class="tag is-primary" @click="runCheckCallBackResponses()">Test
+                    callback</button>
                 <button class="tag is-primary" @click="downloadAllData()">Download Json del gruppo</button>
                 <div class="block">
                     <label class="checkbox">
@@ -77,6 +79,9 @@
                                 <button v-if="!endpoint.isRunning" class="tag is-primary"
                                     @click="runTest(endpoint)">Test</button>
                                 <button v-else class="tag">Test running...</button>
+                                <button v-if="!endpoint.isRunning" class="tag is-primary"
+                                    @click="checkCallBack(endpoint)">Test
+                                    callback</button>
                                 <button class="tag is-primary" @click="downloadThisData(endpoint)">Json
                                     risposta</button>
                             </div>
@@ -222,6 +227,51 @@ async function runTestGroup() {
 
     fullTestIsRunning.value = false;
 }
+
+async function runCheckCallBackResponses() {
+    fullTestIsRunning.value = true;
+    testTotal.value = prop.group.endpoints.length;
+    testDone.value = 0;
+    for (let i = 0; i < prop.group.endpoints.length; i++) {
+        await checkCallBack(prop.group.endpoints[i]);
+        testDone.value++;
+    }
+
+    fullTestIsRunning.value = false;
+}
+
+async function checkCallBack(endpoint) {
+    if (!endpoint.hasError) return;
+    if (endpoint.response1 != undefined && endpoint.response1 != null && endpoint.response2 != undefined && endpoint.response2 != null && endpoint.response1.includes('MY_CALLBACK') && endpoint.response2.includes('MY_CALLBACK')) {
+        let response1JsonString = endpoint.response1.substring(12, endpoint.response1.length - 1);
+        let response2JsonString = endpoint.response2.substring(12, endpoint.response2.length - 1);
+        console.log(response1JsonString);
+        console.log(response2JsonString);
+        let data1;
+        let data2;
+        try {
+            data1 = await JSON.parse(response1JsonString)
+        }
+        catch (err) {
+            console.error(err);
+            return;
+        }
+        try {
+            data2 = await JSON.parse(response2JsonString)
+        }
+        catch (err) {
+            console.error(err);
+            return;
+        }
+        endpoint.responseObjectEqual = JSON.stringify(data1) === JSON.stringify(data2);
+        if (!endpoint.responseEqual) {
+            endpoint.hasError = true;
+        } else {
+            endpoint.hasError = false;
+        }
+    }
+}
+
 
 async function runOnlyErrorsTestGroup() {
     fullTestIsRunning.value = true;
